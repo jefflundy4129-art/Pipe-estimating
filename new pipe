@@ -1,0 +1,331 @@
+import { useState, useCallback } from "react";
+
+const SQFT_CHART = [
+  { size: '3" & Under', pipe: 1,     nipple: 2,    tee: 2,   reducer: 2,   elbow: 2,   flange: 3,    gate: 6,   check: 10,  motor: 10  },
+  { size: '4"',         pipe: 1.2,   nipple: 2,    tee: 2,   reducer: 2,   elbow: 2,   flange: 4,    gate: 12,  check: 18,  motor: 24  },
+  { size: '6"',         pipe: 1.73,  nipple: 3,    tee: 3,   reducer: 3,   elbow: 3,   flange: 5.2,  gate: 15,  check: 26,  motor: 35  },
+  { size: '8"',         pipe: 2.26,  nipple: 4,    tee: 4,   reducer: 4,   elbow: 4.5, flange: 7,    gate: 23,  check: 34,  motor: 45  },
+  { size: '10"',        pipe: 2.81,  nipple: 4.5,  tee: 5,   reducer: 5,   elbow: 6,   flange: 8.5,  gate: 28,  check: 43,  motor: 57  },
+  { size: '12"',        pipe: 3.35,  nipple: 5,    tee: 8,   reducer: 8,   elbow: 8,   flange: 10,   gate: 34,  check: 50,  motor: 67  },
+  { size: '14"',        pipe: 3.67,  nipple: 6,    tee: 9,   reducer: 9,   elbow: 10,  flange: 11,   gate: 37,  check: 57,  motor: 74  },
+  { size: '16"',        pipe: 4.19,  nipple: 6.5,  tee: 12,  reducer: 12,  elbow: 12,  flange: 12.5, gate: 42,  check: 63,  motor: 84  },
+  { size: '18"',        pipe: 4.71,  nipple: 7.5,  tee: 14,  reducer: 14,  elbow: 17,  flange: 14,   gate: 48,  check: 71,  motor: 95  },
+  { size: '20"',        pipe: 5.24,  nipple: 8,    tee: 17,  reducer: 17,  elbow: 21,  flange: 16,   gate: 53,  check: 79,  motor: 105 },
+  { size: '24"',        pipe: 6.28,  nipple: 10,   tee: 25,  reducer: 25,  elbow: 30,  flange: 19,   gate: 63,  check: 95,  motor: 126 },
+  { size: '26"',        pipe: 6.81,  nipple: 10.5, tee: 28,  reducer: 28,  elbow: 35,  flange: 20.5, gate: 71,  check: 106, motor: 142 },
+  { size: '28"',        pipe: 7.5,   nipple: 11,   tee: 30,  reducer: 30,  elbow: 40,  flange: 22.5, gate: 75,  check: 110, motor: 150 },
+  { size: '30"',        pipe: 7.85,  nipple: 12,   tee: 37,  reducer: 37,  elbow: 45,  flange: 24,   gate: 79,  check: 118, motor: 158 },
+  { size: '32"',        pipe: 8.37,  nipple: 13,   tee: 45,  reducer: 45,  elbow: 47,  flange: 25,   gate: 88,  check: 129, motor: 165 },
+  { size: '36"',        pipe: 9.43,  nipple: 14,   tee: 50,  reducer: 50,  elbow: 50,  flange: 28,   gate: 95,  check: 142, motor: 189 },
+  { size: '40"',        pipe: 10.47, nipple: 16,   tee: 65,  reducer: 65,  elbow: 60,  flange: 32,   gate: 111, check: 150, motor: 200 },
+  { size: '42"',        pipe: 11,    nipple: 18,   tee: 70,  reducer: 70,  elbow: 90,  flange: 33,   gate: 120, check: 165, motor: 220 },
+  { size: '44"',        pipe: 11.51, nipple: 20,   tee: 75,  reducer: 75,  elbow: 110, flange: 34.5, gate: 125, check: 180, motor: 243 },
+  { size: '46"',        pipe: 12.04, nipple: 22,   tee: 80,  reducer: 80,  elbow: 130, flange: 36,   gate: 140, check: 195, motor: 260 },
+  { size: '48"',        pipe: 12.57, nipple: 24,   tee: 86,  reducer: 86,  elbow: 150, flange: 38,   gate: 155, check: 205, motor: 282 },
+  { size: '60"',        pipe: 15.6,  nipple: 26,   tee: 94,  reducer: 92,  elbow: 160, flange: 44,   gate: 170, check: 225, motor: 305 },
+];
+
+const ITEM_TYPES = [
+  { value: 'pipe',    label: 'Pipe',         key: 'pipe',    isPipe: true  },
+  { value: 'nipple',  label: 'Nipple/Plug',  key: 'nipple',  isPipe: false },
+  { value: 'tee',     label: 'Tee',          key: 'tee',     isPipe: false },
+  { value: 'reducer', label: 'Reducer',      key: 'reducer', isPipe: false },
+  { value: 'elbow',   label: 'Elbow',        key: 'elbow',   isPipe: false },
+  { value: 'flange',  label: 'Flange',       key: 'flange',  isPipe: false },
+  { value: 'gate',    label: 'Gate Valve',   key: 'gate',    isPipe: false },
+  { value: 'check',   label: 'Check Valve',  key: 'check',   isPipe: false },
+  { value: 'motor',   label: 'Motor Valve',  key: 'motor',   isPipe: false },
+];
+
+const COATINGS = [
+  { value: 'liquid_epoxy', label: 'Liquid Epoxy (2-Part)', primer: 200, topcoat: 150 },
+  { value: 'fbe',          label: 'FBE – Fusion Bonded',   primer: 160, topcoat: 0   },
+  { value: '3lpe',         label: '3LPE / 3LPP',           primer: 180, topcoat: 80  },
+  { value: 'coal_tar',     label: 'Coal Tar Epoxy',         primer: 180, topcoat: 130 },
+  { value: 'ctl',          label: 'CTL',                    primer: 180, topcoat: 130 },
+];
+
+function getSF(sizeStr, typeKey) {
+  const row = SQFT_CHART.find(r => r.size === sizeStr);
+  return row ? row[typeKey] : 0;
+}
+
+let nextId = 1;
+function newLine() {
+  return { id: nextId++, size: '12"', type: 'pipe', qty: 1, lf: 60 };
+}
+
+const s = {
+  wrap: { minHeight:'100vh', background:'#0f1117', color:'#d4d8e2', fontFamily:"'IBM Plex Sans', sans-serif", padding:'0 0 60px' },
+  hdr:  { background:'#0f1117', borderBottom:'2px solid #e8b84b', padding:'16px 28px', display:'flex', alignItems:'baseline', gap:12, position:'sticky', top:0, zIndex:50 },
+  h1:   { fontFamily:"'Bebas Neue', cursive", fontSize:28, letterSpacing:4, color:'#e8b84b', margin:0 },
+  sub:  { fontSize:11, color:'#6b7280', letterSpacing:2, textTransform:'uppercase' },
+  body: { maxWidth:1100, margin:'0 auto', padding:'28px 16px', display:'flex', flexDirection:'column', gap:20 },
+  grid: { display:'grid', gridTemplateColumns:'260px 1fr', gap:20, alignItems:'start' },
+  card: { background:'#171b25', border:'1px solid #2a2f3d', borderRadius:4, overflow:'hidden' },
+  ch:   { background:'#2a2f3d', padding:'8px 16px', fontSize:11, letterSpacing:3, textTransform:'uppercase', color:'#e8b84b', fontFamily:'monospace', display:'flex', alignItems:'center', gap:8 },
+  cb:   { padding:18 },
+  lbl:  { display:'block', fontSize:11, letterSpacing:1.5, textTransform:'uppercase', color:'#6b7280', marginBottom:4, fontFamily:'monospace' },
+  inp:  { width:'100%', background:'#0f1117', border:'1px solid #2a2f3d', color:'#d4d8e2', padding:'8px 10px', fontFamily:'monospace', fontSize:14, borderRadius:2, outline:'none', boxSizing:'border-box' },
+  sel:  { width:'100%', background:'#0f1117', border:'1px solid #2a2f3d', color:'#d4d8e2', padding:'8px 10px', fontFamily:'monospace', fontSize:14, borderRadius:2, outline:'none', boxSizing:'border-box' },
+  fg:   { marginBottom:12 },
+  r2:   { display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 },
+  btn:  { width:'100%', background:'#e8b84b', border:'none', color:'#0f1117', padding:12, cursor:'pointer', fontFamily:"'Bebas Neue', cursive", fontSize:20, letterSpacing:4, borderRadius:2, marginTop:12 },
+  add:  { width:'100%', background:'transparent', border:'1px dashed #2a2f3d', color:'#6b7280', padding:8, cursor:'pointer', fontFamily:'monospace', fontSize:12, letterSpacing:2, textTransform:'uppercase', borderRadius:2, marginTop:8 },
+  del:  { background:'none', border:'1px solid #e85b4b', color:'#e85b4b', width:24, height:24, cursor:'pointer', fontSize:15, borderRadius:2, display:'flex', alignItems:'center', justifyContent:'center' },
+  acc:  { color:'#e8b84b', fontWeight:700, fontFamily:'monospace' },
+  acc2: { color:'#4b9ee8', fontWeight:700, fontFamily:'monospace' },
+  muted:{ color:'#6b7280', fontFamily:'monospace', fontSize:12 },
+  th:   { padding:'8px 10px', textAlign:'left', fontSize:11, letterSpacing:2, textTransform:'uppercase', color:'#6b7280', borderBottom:'1px solid #2a2f3d', whiteSpace:'nowrap', fontFamily:'monospace' },
+  td:   { padding:'8px 10px', borderBottom:'1px solid rgba(42,47,61,0.5)', fontFamily:'monospace', fontSize:13 },
+  sc:   { background:'#0f1117', border:'1px solid #2a2f3d', borderRadius:3, padding:'12px 16px', position:'relative', overflow:'hidden' },
+  scv:  { fontFamily:"'Bebas Neue', cursive", fontSize:32, color:'#e8b84b', lineHeight:1 },
+  scl:  { fontSize:11, letterSpacing:2, textTransform:'uppercase', color:'#6b7280', fontFamily:'monospace', marginBottom:4 },
+  scu:  { fontSize:11, color:'#6b7280', fontFamily:'monospace', marginTop:2 },
+};
+
+export default function App() {
+  const [lines, setLines] = useState([newLine()]);
+  const [jobName, setJobName] = useState('');
+  const [coating, setCoating] = useState('liquid_epoxy');
+  const [primerCov, setPrimerCov] = useState(200);
+  const [topcoatCov, setTopcoatCov] = useState(150);
+  const [waste, setWaste] = useState(15);
+  const [results, setResults] = useState(null);
+  const [showRef, setShowRef] = useState(false);
+
+  const coatingObj = COATINGS.find(c => c.value === coating);
+
+  function handleCoatingChange(val) {
+    setCoating(val);
+    const c = COATINGS.find(x => x.value === val);
+    if (c) { setPrimerCov(c.primer); setTopcoatCov(c.topcoat); }
+  }
+
+  function updateLine(id, field, value) {
+    setLines(ls => ls.map(l => l.id === id ? { ...l, [field]: value } : l));
+  }
+
+  function addLine() { setLines(ls => [...ls, newLine()]); }
+  function removeLine(id) { setLines(ls => ls.filter(l => l.id !== id)); }
+
+  function getLineSF(line) {
+    const typeObj = ITEM_TYPES.find(t => t.value === line.type);
+    if (!typeObj) return 0;
+    const sfUnit = getSF(line.size, typeObj.key);
+    if (!sfUnit) return 0;
+    return typeObj.isPipe ? sfUnit * parseFloat(line.lf || 0) : sfUnit * parseFloat(line.qty || 0);
+  }
+
+  function calculate() {
+    const wasteMult = 1 + (parseFloat(waste) || 0) / 100;
+    const isFBE = coating === 'fbe';
+    const rows = lines.map(line => {
+      const typeObj = ITEM_TYPES.find(t => t.value === line.type);
+      const sfUnit  = getSF(line.size, typeObj.key);
+      const totalSF = getLineSF(line);
+      const primer  = totalSF > 0 ? (totalSF / primerCov)  * wasteMult : 0;
+      const topcoat = totalSF > 0 && !isFBE ? (totalSF / topcoatCov) * wasteMult : 0;
+      return { ...line, typeObj, sfUnit, totalSF, primer, topcoat };
+    });
+    setResults({ rows, coating, jobName: jobName || 'Untitled Job' });
+    setTimeout(() => document.getElementById('results-top')?.scrollIntoView({ behavior:'smooth' }), 100);
+  }
+
+  const totalSF      = results ? results.rows.reduce((s,r) => s + r.totalSF, 0) : 0;
+  const totalPrimer  = results ? results.rows.reduce((s,r) => s + r.primer,  0) : 0;
+  const totalTopcoat = results ? results.rows.reduce((s,r) => s + r.topcoat, 0) : 0;
+  const isFBE        = coating === 'fbe';
+
+  return (
+    <div style={s.wrap}>
+      <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+
+      <div style={s.hdr}>
+        <div style={s.h1}>PipeTakeoff</div>
+        <div style={s.sub}>Shop Coating Material Estimator</div>
+      </div>
+
+      <div style={s.body}>
+        <div style={s.grid}>
+
+          {/* Coating System */}
+          <div style={s.card}>
+            <div style={s.ch}><span style={{width:7,height:7,background:'#e8b84b',borderRadius:'50%',display:'inline-block'}}/>Coating System</div>
+            <div style={s.cb}>
+              <div style={s.fg}>
+                <label style={s.lbl}>Job / Project Name</label>
+                <input style={s.inp} value={jobName} onChange={e => setJobName(e.target.value)} placeholder="e.g. Midland Pipeline – Lot 4" />
+              </div>
+              <div style={s.fg}>
+                <label style={s.lbl}>Coating Type</label>
+                <select style={s.sel} value={coating} onChange={e => handleCoatingChange(e.target.value)}>
+                  {COATINGS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div style={s.r2}>
+                <div style={s.fg}>
+                  <label style={s.lbl}>Primer Coverage (sf/gal)</label>
+                  <input style={s.inp} type="number" value={primerCov} onChange={e => setPrimerCov(e.target.value)} />
+                </div>
+                <div style={s.fg}>
+                  <label style={s.lbl}>Top Coat Coverage (sf/gal)</label>
+                  <input style={s.inp} type="number" value={topcoatCov} onChange={e => setTopcoatCov(e.target.value)} disabled={isFBE} />
+                </div>
+              </div>
+              <div style={s.fg}>
+                <label style={s.lbl}>Waste / Overspray (%)</label>
+                <input style={s.inp} type="number" value={waste} onChange={e => setWaste(e.target.value)} />
+              </div>
+              <button style={s.btn} onClick={calculate}>Calculate Takeoff</button>
+            </div>
+          </div>
+
+          {/* Schedule */}
+          <div style={s.card}>
+            <div style={{...s.ch, justifyContent:'space-between'}}>
+              <span style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{width:7,height:7,background:'#e8b84b',borderRadius:'50%',display:'inline-block'}}/>
+                Pipe, Valves & Fittings Schedule
+              </span>
+              <button onClick={() => setShowRef(true)} style={{background:'transparent',border:'1px solid rgba(75,158,232,0.4)',color:'#4b9ee8',padding:'3px 10px',cursor:'pointer',fontFamily:'monospace',fontSize:11,letterSpacing:2,textTransform:'uppercase',borderRadius:2}}>
+                📋 Sq Ft Chart
+              </button>
+            </div>
+            <div style={{...s.cb, overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse'}}>
+                <thead>
+                  <tr>
+                    <th style={s.th}>Size</th>
+                    <th style={s.th}>Item Type</th>
+                    <th style={s.th}>Qty</th>
+                    <th style={s.th}>Total LF<br/><span style={{fontSize:10,opacity:0.6}}>(pipe only)</span></th>
+                    <th style={s.th}>Sf / Unit</th>
+                    <th style={s.th}>Total Sq Ft</th>
+                    <th style={s.th}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map(line => {
+                    const typeObj = ITEM_TYPES.find(t => t.value === line.type);
+                    const sfUnit  = getSF(line.size, typeObj?.key || 'pipe');
+                    const totalSF = getLineSF(line);
+                    return (
+                      <tr key={line.id}>
+                        <td style={s.td}>
+                          <select style={{...s.sel, minWidth:105}} value={line.size} onChange={e => updateLine(line.id,'size',e.target.value)}>
+                            {SQFT_CHART.map(r => <option key={r.size} value={r.size}>{r.size}</option>)}
+                          </select>
+                        </td>
+                        <td style={s.td}>
+                          <select style={{...s.sel, minWidth:125}} value={line.type} onChange={e => updateLine(line.id,'type',e.target.value)}>
+                            {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                          </select>
+                        </td>
+                        <td style={s.td}>
+                          <input style={{...s.inp, width:60, opacity: typeObj?.isPipe ? 0.4 : 1}} type="number" min="0" value={line.qty}
+                            onChange={e => updateLine(line.id,'qty',e.target.value)} disabled={typeObj?.isPipe} />
+                        </td>
+                        <td style={s.td}>
+                          <input style={{...s.inp, width:70, opacity: typeObj?.isPipe ? 1 : 0.4}} type="number" min="0" value={line.lf}
+                            onChange={e => updateLine(line.id,'lf',e.target.value)} disabled={!typeObj?.isPipe} />
+                        </td>
+                        <td style={{...s.td, ...s.acc}}>{sfUnit || '—'}</td>
+                        <td style={{...s.td, ...s.acc}}>{totalSF > 0 ? totalSF.toFixed(1) : '—'}</td>
+                        <td style={s.td}>
+                          <button style={s.del} onClick={() => removeLine(line.id)}>×</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <button style={s.add} onClick={addLine}>+ Add Line Item</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Results */}
+        {results && (
+          <div style={s.card} id="results-top">
+            <div style={s.ch}><span style={{width:7,height:7,background:'#e8b84b',borderRadius:'50%',display:'inline-block'}}/>Material Takeoff Results</div>
+            <div style={s.cb}>
+              <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:22,letterSpacing:3,color:'#6b7280',marginBottom:16}}>{results.jobName}</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:20}}>
+                {[
+                  { label:'Total Surface Area', value: totalSF.toLocaleString('en-US',{maximumFractionDigits:0}), unit:'sq ft', blue:false },
+                  { label:'Line Items',          value: results.rows.length,                                        unit:'components', blue:false },
+                  { label:'Primer / Base Coat',  value: totalPrimer.toFixed(1),                                    unit:'gallons (incl. waste)', blue:false },
+                  { label:'Top Coat',            value: isFBE ? 'N/A' : totalTopcoat.toFixed(1),                  unit: isFBE ? 'not applicable' : 'gallons (incl. waste)', blue:true },
+                ].map(c => (
+                  <div key={c.label} style={{...s.sc, borderLeft: `3px solid ${c.blue ? '#4b9ee8' : '#e8b84b'}`}}>
+                    <div style={s.scl}>{c.label}</div>
+                    <div style={{...s.scv, color: c.blue ? '#4b9ee8' : '#e8b84b'}}>{c.value}</div>
+                    <div style={s.scu}>{c.unit}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{borderTop:'1px solid #2a2f3d',margin:'16px 0'}}/>
+              <div style={{overflowX:'auto'}}>
+                <table style={{width:'100%',borderCollapse:'collapse'}}>
+                  <thead>
+                    <tr>
+                      {['Size','Item Type','Qty','Sf / Unit','Total Sq Ft','Primer (gal)','Top Coat (gal)'].map(h =>
+                        <th key={h} style={s.th}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.rows.map((r,i) => (
+                      <tr key={i} style={{background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)'}}>
+                        <td style={s.td}>{r.size}</td>
+                        <td style={s.td}>{r.typeObj?.label}</td>
+                        <td style={s.td}>{r.typeObj?.isPipe ? `${r.lf} LF` : `${r.qty} ea`}</td>
+                        <td style={{...s.td,...s.acc}}>{r.sfUnit} sf</td>
+                        <td style={{...s.td,...s.acc}}>{r.totalSF.toFixed(1)} sf</td>
+                        <td style={{...s.td,...s.acc}}>{r.primer.toFixed(2)} gal</td>
+                        <td style={{...s.td,...s.acc2}}>{isFBE ? '—' : r.topcoat.toFixed(2) + ' gal'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Reference Modal */}
+      {showRef && (
+        <div onClick={() => setShowRef(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div onClick={e => e.stopPropagation()} style={{background:'#171b25',border:'1px solid #2a2f3d',borderRadius:4,maxWidth:980,width:'100%',maxHeight:'85vh',overflow:'auto'}}>
+            <div style={{padding:'12px 20px',background:'#2a2f3d',display:'flex',justifyContent:'space-between',alignItems:'center',position:'sticky',top:0}}>
+              <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:3,color:'#e8b84b'}}>Sq Ft Reference Chart</span>
+              <button onClick={() => setShowRef(false)} style={{background:'none',border:'none',color:'#6b7280',cursor:'pointer',fontSize:22}}>×</button>
+            </div>
+            <div style={{padding:16,overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'monospace',fontSize:12}}>
+                <thead>
+                  <tr>
+                    {['Size','Pipe (sf/LF)','Nipple/Plug','Tee','Reducer','Elbow','Flange','Gate Valve','Check Valve','Motor Valve'].map(h =>
+                      <th key={h} style={{padding:'8px 10px',textAlign:'right',fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:'#6b7280',borderBottom:'1px solid #2a2f3d',background:'rgba(0,0,0,0.3)',whiteSpace:'nowrap',':first-child':{textAlign:'left'}}}>{h}</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {SQFT_CHART.map(r => (
+                    <tr key={r.size}>
+                      <td style={{padding:'7px 10px',borderBottom:'1px solid rgba(42,47,61,0.4)',color:'#e8b84b',fontWeight:700,textAlign:'left'}}>{r.size}</td>
+                      {[r.pipe,r.nipple,r.tee,r.reducer,r.elbow,r.flange,r.gate,r.check,r.motor].map((v,i) =>
+                        <td key={i} style={{padding:'7px 10px',borderBottom:'1px solid rgba(42,47,61,0.4)',textAlign:'right',color:'#d4d8e2'}}>{v}</td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
