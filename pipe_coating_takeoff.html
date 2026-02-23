@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipe Coating Material Takeoff</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #171b25;
+    --border: #2a2f3d;
+    --accent: #e8b84b;
+    --accent2: #4b9ee8;
+    --text: #d4d8e2;
+    --muted: #6b7280;
+    --danger: #e85b4b;
+    --success: #4be87c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(42,47,61,0.3) 39px, rgba(42,47,61,0.3) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(42,47,61,0.3) 39px, rgba(42,47,61,0.3) 40px);
+  }
+  header {
+    border-bottom: 2px solid var(--accent);
+    padding: 18px 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    background: rgba(15,17,23,0.97);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 3px; color: var(--accent); }
+  header span { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px 20px; display: flex; flex-direction: column; gap: 24px; }
+
+  .top-row { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .panel-header {
+    background: var(--border); padding: 9px 18px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 8px;
+  }
+  .panel-header .dot { width:7px; height:7px; background:var(--accent); border-radius:50%; display:inline-block; flex-shrink:0; }
+  .panel-body { padding: 20px; }
+
+  label { display:block; font-size:0.68rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:5px; font-family:'IBM Plex Mono',monospace; }
+  input, select {
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
+    padding:9px 12px; font-family:'IBM Plex Mono',monospace; font-size:0.88rem;
+    border-radius:2px; outline:none; transition:border-color 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface); }
+  .form-group { margin-bottom: 14px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Line Items Table */
+  .line-table { width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:0.78rem; }
+  .line-table thead { background: rgba(0,0,0,0.4); }
+  .line-table th {
+    padding:9px 10px; text-align:left; font-size:0.62rem; letter-spacing:2px;
+    text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  .line-table td { padding:6px 8px; border-bottom:1px solid rgba(42,47,61,0.5); vertical-align:middle; }
+  .line-table tr:hover td { background: rgba(232,184,75,0.03); }
+  .line-table select, .line-table input { padding: 5px 8px; font-size: 0.78rem; border-radius: 2px; }
+  .sqft-display { font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color: var(--accent); font-weight:600; white-space:nowrap; }
+  .remove-btn {
+    background:none; border:1px solid var(--danger); color:var(--danger);
+    width:22px; height:22px; cursor:pointer; font-size:14px; border-radius:2px;
+    display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0;
+  }
+  .remove-btn:hover { background:var(--danger); color:#fff; }
+
+  .add-btn {
+    width:100%; background:transparent; border:1px dashed var(--border); color:var(--muted);
+    padding:9px; cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+    letter-spacing:2px; text-transform:uppercase; border-radius:2px; transition:all 0.2s; margin-top:8px;
+  }
+  .add-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  .calc-btn {
+    width:100%; background:var(--accent); border:none; color:#0f1117; padding:13px;
+    cursor:pointer; font-family:'Bebas Neue',sans-serif; font-size:1.2rem; letter-spacing:4px;
+    border-radius:2px; transition:opacity 0.2s; margin-top:12px;
+  }
+  .calc-btn:hover { opacity:0.85; }
+
+  /* Results */
+  .results-section { display:none; }
+  .results-section.visible { display:block; }
+  .results-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:14px; margin-bottom:24px; }
+  .stat-card {
+    background:var(--bg); border:1px solid var(--border); border-radius:3px;
+    padding:14px 18px; position:relative; overflow:hidden;
+  }
+  .stat-card::after { content:''; position:absolute; left:0;top:0;bottom:0; width:3px; background:var(--accent); }
+  .stat-card.blue::after { background:var(--accent2); }
+  .stat-label { font-family:'IBM Plex Mono',monospace; font-size:0.62rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .stat-value { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; color:var(--accent); line-height:1; }
+  .stat-card.blue .stat-value { color:var(--accent2); }
+  .stat-unit { font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--muted); margin-top:3px; }
+
+  .res-table { width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:0.78rem; }
+  .res-table thead { background:rgba(0,0,0,0.4); }
+  .res-table th { padding:9px 12px; text-align:left; font-size:0.62rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); }
+  .res-table td { padding:10px 12px; border-bottom:1px solid rgba(42,47,61,0.45); }
+  .res-table tr:hover td { background:rgba(232,184,75,0.04); }
+  .qty-val { color:var(--accent); font-weight:600; }
+  .qty-val2 { color:var(--accent2); font-weight:600; }
+
+  .type-badge { display:inline-block; padding:2px 7px; border-radius:2px; font-size:0.62rem; letter-spacing:1px; text-transform:uppercase; }
+  .b-pipe    { background:rgba(75,232,124,0.12); color:var(--success); border:1px solid rgba(75,232,124,0.3); }
+  .b-valve   { background:rgba(232,184,75,0.12); color:var(--accent);  border:1px solid rgba(232,184,75,0.3); }
+  .b-fitting { background:rgba(75,158,232,0.12); color:var(--accent2); border:1px solid rgba(75,158,232,0.3); }
+  .b-flange  { background:rgba(232,91,75,0.12);  color:var(--danger);  border:1px solid rgba(232,91,75,0.3);  }
+
+  .divider { border:none; border-top:1px solid var(--border); margin:18px 0; }
+
+  .export-btn {
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    padding:7px 18px; cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:0.68rem;
+    letter-spacing:2px; text-transform:uppercase; border-radius:2px; transition:all 0.2s; margin-top:16px;
+  }
+  .export-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* Reference Modal */
+  .ref-btn {
+    background:transparent; border:1px solid rgba(75,158,232,0.4); color:var(--accent2);
+    padding:5px 12px; cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:0.62rem;
+    letter-spacing:2px; text-transform:uppercase; border-radius:2px; transition:all 0.2s;
+  }
+  .ref-btn:hover { background:rgba(75,158,232,0.1); }
+  .modal-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82);
+    z-index:200; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:4px; max-width:980px; width:100%; max-height:88vh; overflow:auto; }
+  .modal-hdr { padding:12px 20px; background:var(--border); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1; }
+  .modal-hdr span { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:3px; color:var(--accent); }
+  .close-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1.4rem; line-height:1; padding:2px 8px; }
+  .close-btn:hover { color:var(--text); }
+  .ref-table { width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:0.72rem; }
+  .ref-table th { padding:8px 10px; text-align:right; font-size:0.6rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); background:rgba(0,0,0,0.3); white-space:nowrap; }
+  .ref-table th:first-child { text-align:left; }
+  .ref-table td { padding:7px 10px; text-align:right; border-bottom:1px solid rgba(42,47,61,0.4); }
+  .ref-table td:first-child { text-align:left; color:var(--accent); font-weight:600; }
+  .ref-table tr:hover td { background:rgba(232,184,75,0.04); }
+
+  @media(max-width:800px) {
+    .top-row { grid-template-columns:1fr; }
+    .row2 { grid-template-columns:1fr; }
+    header { padding:14px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PipeTakeoff</h1>
+  <span>Shop Coating Material Estimator</span>
+</header>
+
+<div class="container">
+  <div class="top-row">
+
+    <!-- Coating System Panel -->
+    <div class="panel">
+      <div class="panel-header"><span class="dot"></span>Coating System</div>
+      <div class="panel-body">
+        <div class="form-group">
+          <label>Job / Project Name</label>
+          <input type="text" id="job-name" placeholder="e.g. Midland Pipeline – Lot 4">
+        </div>
+        <div class="form-group">
+          <label>Coating Type</label>
+          <select id="coating-type" onchange="updateCoatingDefaults()">
+            <option value="fbe">FBE – Fusion Bonded Epoxy</option>
+            <option value="liquid_epoxy">Liquid Epoxy (2-Part)</option>
+            <option value="3lpe">3LPE / 3LPP</option>
+            <option value="coal_tar">Coal Tar Epoxy</option>
+            <option value="ctl">CTL – Coal Tar / Liquid</option>
+          </select>
+        </div>
+        <div class="row2">
+          <div class="form-group">
+            <label>Primer Coverage<br>(sf / gal)</label>
+            <input type="number" id="primer-cov" value="200" step="5" min="10">
+          </div>
+          <div class="form-group">
+            <label>Top Coat Coverage<br>(sf / gal)</label>
+            <input type="number" id="topcoat-cov" value="150" step="5" min="10">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Waste / Overspray Factor (%)</label>
+          <input type="number" id="waste" value="15" min="0" max="60">
+        </div>
+        <button class="calc-btn" onclick="calculate()">Calculate Takeoff</button>
+      </div>
+    </div>
+
+    <!-- Schedule Panel -->
+    <div class="panel">
+      <div class="panel-header" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span class="dot"></span>Pipe, Valves &amp; Fittings Schedule
+        </span>
+        <button class="ref-btn" onclick="document.getElementById('refModal').classList.add('open')">📋 Sq Ft Chart</button>
+      </div>
+      <div class="panel-body" style="overflow-x:auto;">
+        <table class="line-table">
+          <thead>
+            <tr>
+              <th>Size</th>
+              <th>Item Type</th>
+              <th>Qty / Joints</th>
+              <th>Jt Len (ft)</th>
+              <th>Sq Ft/Unit</th>
+              <th>Total Sq Ft</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="line-body"></tbody>
+        </table>
+        <button class="add-btn" onclick="addLine()">+ Add Line Item</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Results -->
+  <div class="results-section" id="results-section">
+    <div class="panel">
+      <div class="panel-header"><span class="dot"></span>Material Takeoff Results</div>
+      <div class="panel-body">
+        <div id="job-display" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--muted);margin-bottom:18px;"></div>
+        <div class="results-grid" id="summary-cards"></div>
+        <hr class="divider">
+        <div style="overflow-x:auto;">
+          <table class="res-table">
+            <thead>
+              <tr>
+                <th>Size</th>
+                <th>Item Type</th>
+                <th>Qty</th>
+                <th>Sq Ft / Unit</th>
+                <th>Total Sq Ft</th>
+                <th>Primer (gal)</th>
+                <th>Top Coat (gal)</th>
+              </tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+          </table>
+        </div>
+        <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reference Chart Modal -->
+<div class="modal-overlay" id="refModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span>Pipe, Valves &amp; Fittings — Sq Ft Chart</span>
+      <button class="close-btn" onclick="document.getElementById('refModal').classList.remove('open')">×</button>
+    </div>
+    <div style="padding:16px;overflow-x:auto;">
+      <table class="ref-table" id="ref-table"></table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── YOUR SQ FT CHART ──────────────────────────────────────────────────────────
+// Columns: [size, piping(per LF), nipples/plugs, tee, reducers, elbows, flanges, gate_valves, check_valves, motor_valves]
+const SQFT_CHART = [
+  ['3" & Under', 1,     2,    2,    2,    2,    3,    6,    10,   10 ],
+  ['4"',         1.2,   2,    2,    2,    2,    4,    12,   18,   24 ],
+  ['6"',         1.73,  3,    3,    3,    3,    5.2,  15,   26,   35 ],
+  ['8"',         2.26,  4,    4,    4,    4.5,  7,    23,   34,   45 ],
+  ['10"',        2.81,  4.5,  5,    5,    6,    8.5,  28,   43,   57 ],
+  ['12"',        3.35,  5,    8,    8,    8,    10,   34,   50,   67 ],
+  ['14"',        3.67,  6,    9,    9,    10,   11,   37,   57,   74 ],
+  ['16"',        4.19,  6.5,  12,   12,   12,   12.5, 42,   63,   84 ],
+  ['18"',        4.71,  7.5,  14,   14,   17,   14,   48,   71,   95 ],
+  ['20"',        5.24,  8,    17,   17,   21,   16,   53,   79,   105],
+  ['24"',        6.28,  10,   25,   25,   30,   19,   63,   95,   126],
+  ['26"',        6.81,  10.5, 28,   28,   35,   20.5, 71,   106,  142],
+  ['28"',        7.5,   11,   30,   30,   40,   22.5, 75,   110,  150],
+  ['30"',        7.85,  12,   37,   37,   45,   24,   79,   118,  158],
+  ['32"',        8.37,  13,   45,   45,   47,   25,   88,   129,  165],
+  ['36"',        9.43,  14,   50,   50,   50,   28,   95,   142,  189],
+  ['40"',        10.47, 16,   65,   65,   60,   32,   111,  150,  200],
+  ['42"',        11,    18,   70,   70,   90,   33,   120,  165,  220],
+  ['44"',        11.51, 20,   75,   75,   110,  34.5, 125,  180,  243],
+  ['46"',        12.04, 22,   80,   80,   130,  36,   140,  195,  260],
+  ['48"',        12.57, 24,   86,   86,   150,  38,   155,  205,  282],
+  ['60"',        15.6,  26,   94,   92,   160,  44,   170,  225,  305],
+];
+
+const COL_HEADERS = ['Size','Piping (sf/LF)','Nipples/Plugs','Tee','Reducers','Elbows','Flanges','Gate Valves','Check Valves','Motor Valves'];
+
+// Item type definitions: col index into SQFT_CHART row (1-based), whether it needs joint length
+const ITEM_TYPES = [
+  { value:'piping',      label:'Pipe',            col:1, needsLen:true,  badge:'b-pipe'    },
+  { value:'nipples',     label:'Nipple / Plug',   col:2, needsLen:false, badge:'b-fitting' },
+  { value:'tee',         label:'Tee',             col:3, needsLen:false, badge:'b-fitting' },
+  { value:'reducers',    label:'Reducer',         col:4, needsLen:false, badge:'b-fitting' },
+  { value:'elbows',      label:'Elbow',           col:5, needsLen:false, badge:'b-fitting' },
+  { value:'flanges',     label:'Flange',          col:6, needsLen:false, badge:'b-flange'  },
+  { value:'gate_valve',  label:'Gate Valve',      col:7, needsLen:false, badge:'b-valve'   },
+  { value:'check_valve', label:'Check Valve',     col:8, needsLen:false, badge:'b-valve'   },
+  { value:'motor_valve', label:'Motor Valve',     col:9, needsLen:false, badge:'b-valve'   },
+];
+
+function getSqFtUnit(sizeLabel, typeVal) {
+  const row = SQFT_CHART.find(r => r[0] === sizeLabel);
+  const type = ITEM_TYPES.find(t => t.value === typeVal);
+  if (!row || !type) return null;
+  return row[type.col];
+}
+
+// ─── BUILD REFERENCE TABLE ─────────────────────────────────────────────────────
+function buildRefTable() {
+  const tbl = document.getElementById('ref-table');
+  let html = '<thead><tr>' + COL_HEADERS.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+  SQFT_CHART.forEach(row => {
+    html += '<tr>' + row.map((v,i) => i === 0 ? `<td>${v}</td>` : `<td>${v}</td>`).join('') + '</tr>';
+  });
+  tbl.innerHTML = html + '</tbody>';
+}
+
+// ─── SIZE & TYPE OPTIONS ───────────────────────────────────────────────────────
+function sizeOptions(selected) {
+  return SQFT_CHART.map(r => `<option value="${r[0]}"${r[0]===selected?' selected':''}>${r[0]}</option>`).join('');
+}
+function typeOptions(selected) {
+  return ITEM_TYPES.map(t => `<option value="${t.value}"${t.value===selected?' selected':''}>${t.label}</option>`).join('');
+}
+
+// ─── LINE ITEMS ────────────────────────────────────────────────────────────────
+let lineCount = 0;
+let lastResults = [];
+
+function addLine(defaultSize, defaultType) {
+  lineCount++;
+  const id = lineCount;
+  const tbody = document.getElementById('line-body');
+  const tr = document.createElement('tr');
+  tr.id = `line-${id}`;
+  tr.innerHTML = `
+    <td><select id="sz-${id}" onchange="updateLine(${id})" style="min-width:110px;">${sizeOptions(defaultSize||'6"')}</select></td>
+    <td><select id="type-${id}" onchange="updateLine(${id})" style="min-width:130px;">${typeOptions(defaultType||'piping')}</select></td>
+    <td><input type="number" id="qty-${id}" value="1" min="0" step="1" style="width:65px;" oninput="updateLine(${id})"></td>
+    <td><input type="number" id="jlen-${id}" value="40" min="1" step="0.5" style="width:65px;" oninput="updateLine(${id})"></td>
+    <td><span class="sqft-display" id="sqft-unit-${id}">—</span></td>
+    <td><span class="sqft-display" id="sqft-total-${id}">—</span></td>
+    <td><button class="remove-btn" onclick="removeLine(${id})">×</button></td>
+  `;
+  tbody.appendChild(tr);
+  updateLine(id);
+}
+
+function removeLine(id) {
+  const el = document.getElementById(`line-${id}`);
+  if (el) el.remove();
+}
+
+function updateLine(id) {
+  const size    = document.getElementById(`sz-${id}`).value;
+  const typeVal = document.getElementById(`type-${id}`).value;
+  const qty     = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
+  const jlen    = parseFloat(document.getElementById(`jlen-${id}`).value) || 40;
+  const typeObj = ITEM_TYPES.find(t => t.value === typeVal);
+  const sqftUnit = getSqFtUnit(size, typeVal);
+
+  // Dim joint length field when not applicable
+  document.getElementById(`jlen-${id}`).style.opacity = typeObj && typeObj.needsLen ? '1' : '0.3';
+  document.getElementById(`jlen-${id}`).style.pointerEvents = typeObj && typeObj.needsLen ? '' : 'none';
+
+  let total = 0;
+  if (sqftUnit !== null) {
+    total = typeObj.needsLen ? sqftUnit * qty * jlen : sqftUnit * qty;
+  }
+
+  document.getElementById(`sqft-unit-${id}`).textContent  = sqftUnit !== null ? sqftUnit   : '—';
+  document.getElementById(`sqft-total-${id}`).textContent = total > 0          ? total.toFixed(1) : '—';
+}
+
+// ─── COATING DEFAULTS ──────────────────────────────────────────────────────────
+function updateCoatingDefaults() {
+  const t = document.getElementById('coating-type').value;
+  const d = { fbe:[160,0], liquid_epoxy:[200,150], '3lpe':[180,80], coal_tar:[180,130], ctl:[180,130] };
+  const vals = d[t] || [200,150];
+  document.getElementById('primer-cov').value  = vals[0];
+  document.getElementById('topcoat-cov').value = vals[1];
+}
+
+// ─── CALCULATE ────────────────────────────────────────────────────────────────
+function calculate() {
+  const primerCov   = parseFloat(document.getElementById('primer-cov').value)  || 200;
+  const topcoatCov  = parseFloat(document.getElementById('topcoat-cov').value) || 150;
+  const wasteFactor = 1 + (parseFloat(document.getElementById('waste').value)  || 15) / 100;
+  const coating     = document.getElementById('coating-type').value;
+  const jobName     = document.getElementById('job-name').value || 'Untitled Job';
+  const isFBE       = coating === 'fbe';
+
+  const rows = [];
+  document.querySelectorAll('#line-body tr').forEach(tr => {
+    const id      = tr.id.split('-')[1];
+    const size    = document.getElementById(`sz-${id}`).value;
+    const typeVal = document.getElementById(`type-${id}`).value;
+    const qty     = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
+    const jlen    = parseFloat(document.getElementById(`jlen-${id}`).value) || 40;
+    const typeObj = ITEM_TYPES.find(t => t.value === typeVal);
+    const sqftUnit = getSqFtUnit(size, typeVal);
+    const total    = typeObj && typeObj.needsLen ? sqftUnit * qty * jlen : sqftUnit * qty;
+    const primer   = (total / primerCov)  * wasteFactor;
+    const topcoat  = isFBE ? 0 : (total / topcoatCov) * wasteFactor;
+    rows.push({ size, typeVal, typeObj, qty, jlen, sqftUnit, total, primer, topcoat });
+  });
+
+  if (!rows.length) { alert('Add at least one line item first.'); return; }
+  lastResults = { rows, coating, jobName, primerCov, topcoatCov };
+
+  const totalSA      = rows.reduce((s,r) => s + r.total,   0);
+  const totalPrimer  = rows.reduce((s,r) => s + r.primer,  0);
+  const totalTopcoat = rows.reduce((s,r) => s + r.topcoat, 0);
+
+  document.getElementById('job-display').textContent = jobName;
+
+  const COAT_LABELS = { fbe:'FBE', liquid_epoxy:'Liquid Epoxy', '3lpe':'3LPE/3LPP', coal_tar:'Coal Tar', ctl:'CTL' };
+
+  document.getElementById('summary-cards').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Total Surface Area</div>
+      <div class="stat-value">${totalSA.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+      <div class="stat-unit">sq ft</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Line Items</div>
+      <div class="stat-value">${rows.length}</div>
+      <div class="stat-unit">components</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Primer / Base Coat</div>
+      <div class="stat-value">${totalPrimer.toFixed(1)}</div>
+      <div class="stat-unit">gallons (incl. waste)</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Top Coat — ${COAT_LABELS[coating]}</div>
+      <div class="stat-value">${isFBE ? 'N/A' : totalTopcoat.toFixed(1)}</div>
+      <div class="stat-unit">${isFBE ? 'not applicable for FBE' : 'gallons (incl. waste)'}</div>
+    </div>
+  `;
+
+  document.getElementById('results-body').innerHTML = rows.map(r => {
+    const label    = r.typeObj ? r.typeObj.label : r.typeVal;
+    const badge    = r.typeObj ? r.typeObj.badge : 'b-fitting';
+    const qtyLabel = r.typeObj && r.typeObj.needsLen
+      ? `${r.qty} jts × ${r.jlen} ft`
+      : `${r.qty} ea`;
+    return `<tr>
+      <td>${r.size}</td>
+      <td><span class="type-badge ${badge}">${label}</span></td>
+      <td>${qtyLabel}</td>
+      <td>${r.sqftUnit !== null ? r.sqftUnit : '—'} sf</td>
+      <td class="qty-val">${r.total.toFixed(1)} sf</td>
+      <td class="qty-val">${r.primer.toFixed(2)} gal</td>
+      <td class="qty-val2">${isFBE ? '—' : r.topcoat.toFixed(2) + ' gal'}</td>
+    </tr>`;
+  }).join('');
+
+  const sec = document.getElementById('results-section');
+  sec.classList.add('visible');
+  setTimeout(() => sec.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
+}
+
+// ─── EXPORT CSV ────────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!lastResults || !lastResults.rows.length) return;
+  const { rows, coating, jobName } = lastResults;
+  const isFBE = coating === 'fbe';
+  const COAT_LABELS = { fbe:'FBE', liquid_epoxy:'Liquid Epoxy', '3lpe':'3LPE/3LPP', coal_tar:'Coal Tar Epoxy', ctl:'CTL' };
+
+  let csv = `Job Name,${jobName}\nCoating,${COAT_LABELS[coating]}\nWaste Factor,${document.getElementById('waste').value}%\n\n`;
+  csv += 'Size,Item Type,Qty,Joint Length (ft),Sq Ft/Unit,Total Sq Ft,Primer (gal),Top Coat (gal)\n';
+  rows.forEach(r => {
+    const len = r.typeObj && r.typeObj.needsLen ? r.jlen : '';
+    csv += `${r.size},${r.typeObj?r.typeObj.label:r.typeVal},${r.qty},${len},${r.sqftUnit??''},${r.total.toFixed(1)},${r.primer.toFixed(2)},${isFBE?0:r.topcoat.toFixed(2)}\n`;
+  });
+
+  const blob = new Blob([csv], { type:'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${jobName.replace(/\s+/g,'_')}_takeoff.csv`;
+  a.click();
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────────
+buildRefTable();
+addLine('6"', 'piping');
+updateCoatingDefaults();
+</script>
+</body>
+</html>
